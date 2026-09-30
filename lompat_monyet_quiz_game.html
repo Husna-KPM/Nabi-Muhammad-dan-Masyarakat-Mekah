@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lompat Monyet: Kuiz Sira & Jahiliah</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: Fredoka & Nunito -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      box-sizing: border-box;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Fredoka', 'Nunito', sans-serif;
+      background-color: #1a2e05;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .custom-shadow {
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    }
+    .btn-bounce {
+      transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.2s;
+    }
+    .btn-bounce:active {
+      transform: scale(0.95);
+    }
+    /* Custom Scrollbar for Quiz Modal */
+    .modal-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    .modal-scroll::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+    .modal-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 8px;
+    }
+    .modal-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="relative flex flex-col justify-center items-center w-full h-full text-slate-800 select-none">
+
+  <!-- Main Game Canvas -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD Overlay (Top Screen Header) -->
+  <div id="hud" class="absolute top-0 left-0 right-0 p-3 md:p-5 flex justify-between items-center pointer-events-none z-10 max-w-6xl mx-auto w-full">
+    <!-- Hearts (Lives) -->
+    <div class="flex items-center bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 shadow-lg">
+      <span id="livesContainer" class="text-2xl md:text-3xl tracking-widest filter drop-shadow">
+        ❤️❤️❤️❤️❤️
+      </span>
+    </div>
+
+    <!-- Questions Progress & Coins -->
+    <div class="flex gap-3 items-center">
+      <!-- Coins Count -->
+      <div class="flex items-center gap-1.5 bg-amber-500/90 backdrop-blur-md text-white font-bold text-lg md:text-xl px-4 py-1.5 rounded-full border border-amber-300 shadow-lg">
+        <span class="text-2xl animate-pulse">🪙</span>
+        <span id="coinCount">0</span>
+      </div>
+
+      <!-- Question Counter -->
+      <div class="flex items-center gap-1.5 bg-emerald-600/90 backdrop-blur-md text-white font-bold text-lg md:text-xl px-4 py-1.5 rounded-full border border-emerald-300 shadow-lg">
+        <span>📖</span>
+        <span id="questionProgress">0 / 15</span>
+      </div>
+
+      <!-- Audio Mute Toggle Button -->
+      <button id="bgmToggleBtn" class="pointer-events-auto bg-white/80 hover:bg-white text-slate-800 p-2 md:p-2.5 rounded-full shadow-lg text-xl btn-bounce ml-1 flex items-center justify-center w-10 h-10 md:w-12 md:h-12 border-2 border-emerald-500">
+        🔊
+      </button>
+    </div>
+  </div>
+
+  <!-- Start Screen Overlay -->
+  <div id="startModal" class="absolute inset-0 bg-black/60 backdrop-blur-md flex justify-center items-center p-4 z-30">
+    <div class="bg-gradient-to-b from-amber-100 to-amber-50 border-4 border-amber-500 rounded-3xl p-6 md:p-8 max-w-lg w-full text-center custom-shadow relative overflow-hidden">
+      <div class="absolute -top-12 -right-12 w-32 h-32 bg-amber-300/40 rounded-full blur-xl"></div>
+      <div class="text-6xl md:text-7xl mb-2 animate-bounce">🐒</div>
+      <h1 class="text-3xl md:text-4xl font-extrabold text-amber-900 mb-2 tracking-wide">Monyet Melompat</h1>
+      <p class="text-base md:text-lg text-amber-800 font-semibold mb-4">Kuiz Sira & Zaman Jahiliah</p>
+      
+      <div class="bg-white/80 rounded-2xl p-4 mb-6 text-left text-slate-700 text-sm md:text-base space-y-2 border border-amber-200">
+        <p class="font-bold text-amber-900 border-b border-amber-200 pb-1">🎮 Cara Bermain:</p>
+        <p>• Tekan <kbd class="bg-amber-200 px-2 py-0.5 rounded font-mono text-xs font-bold">SPACEBAR</kbd> atau <kbd class="bg-amber-200 px-2 py-0.5 rounded font-mono text-xs font-bold">TAP SKRIN</kbd> untuk melompat.</p>
+        <p>• Elak duri tajam 🌵 dan kumpul syiling emas 🪙.</p>
+        <p>• Setiap 2–3 lompatan melepasi duri, jawab soalan kuiz.</p>
+        <p>• Anda mempunyai <span class="text-red-500 font-bold">5 Nyawa ❤️</span>. Berhati-hati!</p>
+      </div>
+
+      <button id="startGameBtn" class="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-extrabold text-xl py-4 rounded-2xl shadow-lg border-b-4 border-green-800 btn-bounce flex items-center justify-center gap-2">
+        <span>MULA PERMAINAN</span> 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- Quiz Modal Popup -->
+  <div id="quizModal" class="hidden absolute inset-0 bg-black/75 backdrop-blur-md flex justify-center items-center p-4 z-40">
+    <div class="bg-gradient-to-b from-sky-50 to-indigo-50 border-4 border-indigo-400 rounded-3xl p-5 md:p-8 max-w-2xl w-full custom-shadow flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="flex justify-between items-center mb-4 border-b-2 border-indigo-100 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-3xl">🤔</span>
+          <span id="quizNumberTag" class="bg-indigo-600 text-white font-bold text-xs md:text-sm px-3 py-1 rounded-full uppercase tracking-wider">Soalan 1 / 15</span>
+        </div>
+        <div class="text-sm font-semibold text-slate-500">
+          Monyet Berhenti Sekejap!
+        </div>
+      </div>
+
+      <!-- Question Text -->
+      <div class="modal-scroll overflow-y-auto my-auto pr-1">
+        <h2 id="quizQuestionText" class="text-lg md:text-2xl font-extrabold text-slate-800 mb-6 leading-relaxed">
+          Apakah kepercayaan sebahagian besar masyarakat Arab sebelum Nabi Muhammad S.A.W. diutuskan?
+        </h2>
+
+        <!-- Answer Options Container -->
+        <div id="quizOptionsContainer" class="grid grid-cols-1 gap-3 md:gap-4 mb-2">
+          <!-- Dynamically Generated Option Buttons -->
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div id="quizFeedback" class="mt-4 text-center font-bold text-lg min-h-[30px] flex items-center justify-center gap-2">
+        <!-- Dynamic feedback message after answer -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Over / Game Complete Modal -->
+  <div id="endModal" class="hidden absolute inset-0 bg-black/80 backdrop-blur-md flex justify-center items-center p-4 z-50">
+    <div class="bg-white border-4 rounded-3xl p-6 md:p-8 max-w-lg w-full text-center custom-shadow relative" id="endCardBorder">
+      <div id="endEmoji" class="text-7xl mb-2 animate-bounce">🏆</div>
+      <h1 id="endTitle" class="text-3xl md:text-4xl font-extrabold mb-2">TAHNIAH!</h1>
+      <p id="endSubtitle" class="text-slate-600 font-semibold mb-6">Anda telah menyelesaikan kuiz ini!</p>
+
+      <!-- Score Breakdown -->
+      <div class="bg-slate-100 rounded-2xl p-4 mb-6 space-y-3 border border-slate-200">
+        <div class="flex justify-between items-center text-lg font-bold">
+          <span class="text-slate-600">Jawapan Betul:</span>
+          <span id="endScoreText" class="text-emerald-600 text-2xl">15 / 15</span>
+        </div>
+        <div class="flex justify-between items-center text-lg font-bold">
+          <span class="text-slate-600">Syiling Dikutip:</span>
+          <span id="endCoinsText" class="text-amber-500 text-2xl">🪙 0</span>
+        </div>
+        <div class="flex justify-between items-center text-lg font-bold">
+          <span class="text-slate-600">Baki Nyawa:</span>
+          <span id="endLivesText" class="text-red-500 text-2xl">❤️❤️❤️❤️❤️</span>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <button id="restartGameBtn" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xl py-4 rounded-2xl shadow-lg border-b-4 border-orange-700 btn-bounce flex items-center justify-center gap-2">
+        <span>MAIN SEMULA</span> 🔄
+      </button>
+    </div>
+  </div>
+
+  <script>
+    /* ========================================================================
+       1. DATA QUESTIONS & ANSWERS (15 QUESTIONS SHUFFLED AT START)
+       ======================================================================== */
+    const originalQuestions = [
+      {
+        question: "1. Apakah kepercayaan sebahagian besar masyarakat Arab sebelum Nabi Muhammad S.A.W. diutuskan?",
+        options: [
+          "A. Menyembah Allah SWT sahaja",
+          "B. Menyembah berhala",
+          "C. Menyembah para nabi",
+          "D. Menyembah malaikat"
+        ],
+        correctIndex: 1
+      },
+      {
+        question: "2. Apakah antara amalan buruk masyarakat Arab sebelum kedatangan Islam?",
+        options: [
+          "A. Bersedekah",
+          "B. Membantu jiran",
+          "C. Meminum arak dan berjudi",
+          "D. Menuntut ilmu"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "3. Apakah yang menjadi salah satu cara hidup masyarakat Arab pada zaman jahiliah?",
+        options: [
+          "A. Sentiasa hidup bersatu",
+          "B. Berperang antara kabilah",
+          "C. Mengutamakan persaudaraan Islam",
+          "D. Mengamalkan hukum Islam"
+        ],
+        correctIndex: 1
+      },
+      {
+        question: "4. Apakah maksud zaman jahiliah?",
+        options: [
+          "A. Zaman masyarakat mempunyai banyak ilmu",
+          "B. Zaman masyarakat hidup dalam kemajuan",
+          "C. Zaman masyarakat jauh daripada petunjuk Allah SWT",
+          "D. Zaman selepas Nabi Muhammad S.A.W. berhijrah"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "5. Apakah antara amalan masyarakat Arab yang bertentangan dengan ajaran Islam?",
+        options: [
+          "A. Menghormati tetamu",
+          "B. Menepati janji",
+          "C. Menindas golongan yang lemah",
+          "D. Membantu orang miskin"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "6. Bagaimanakah keadaan hubungan antara sesetengah kabilah Arab sebelum Islam?",
+        options: [
+          "A. Sentiasa aman",
+          "B. Sering berlaku perselisihan dan peperangan",
+          "C. Sentiasa bekerjasama",
+          "D. Tiada perselisihan"
+        ],
+        correctIndex: 1
+      },
+      {
+        question: "7. Apakah kesan kehidupan masyarakat yang jauh daripada petunjuk Allah SWT?",
+        options: [
+          "A. Kehidupan menjadi lebih teratur",
+          "B. Semua orang hidup aman",
+          "C. Berlaku pelbagai kemungkaran dan perselisihan",
+          "D. Semua orang saling menghormati"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "8. Bagaimanakah keperibadian Nabi Muhammad S.A.W. sebelum dilantik menjadi Rasul?",
+        options: [
+          "A. Suka melakukan kejahatan",
+          "B. Suka menipu",
+          "C. Amanah dan bercakap benar",
+          "D. Suka bergaduh"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "9. Apakah yang dapat kita teladani daripada keperibadian Nabi Muhammad S.A.W. sebelum menjadi Rasul?",
+        options: [
+          "A. Menjadi terkenal",
+          "B. Mengumpul kekayaan",
+          "C. Bersikap jujur dan amanah dalam kehidupan",
+          "D. Menjauhi masyarakat"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "10. Bagaimanakah reaksi sebahagian masyarakat Mekah terhadap dakwah Nabi Muhammad S.A.W.?",
+        options: [
+          "A. Semua terus menerima Islam",
+          "B. Sebahagian daripada mereka menentang dakwah Baginda",
+          "C. Semua berpindah ke Madinah",
+          "D. Semua membantu Baginda"
+        ],
+        correctIndex: 1
+      },
+      {
+        question: "11. Apakah sikap Nabi Muhammad S.A.W. ketika menghadapi tentangan masyarakat Mekah?",
+        options: [
+          "A. Cepat berputus asa",
+          "B. Membalas dengan kejahatan",
+          "C. Sabar dan tabah",
+          "D. Berhenti berdakwah"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "12. Apakah yang dilakukan oleh Nabi Muhammad S.A.W. apabila dakwah Baginda ditentang?",
+        options: [
+          "A. Berhenti mengajak manusia kepada Islam",
+          "B. Membalas hinaan dengan hinaan",
+          "C. Terus berdakwah dengan sabar dan berhikmah",
+          "D. Meninggalkan semua usaha dakwah"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "13. Apakah akhlak Nabi Muhammad S.A.W. ketika menghadapi orang yang menyakiti Baginda?",
+        options: [
+          "A. Berdendam",
+          "B. Membalas kejahatan",
+          "C. Bersabar dan tidak membalas dengan kejahatan",
+          "D. Menghina mereka"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "14. Mengapakah Nabi Muhammad S.A.W. tetap meneruskan dakwah walaupun menghadapi tentangan?",
+        options: [
+          "A. Baginda ingin mendapat kekayaan",
+          "B. Baginda ingin menjadi terkenal",
+          "C. Baginda melaksanakan amanah daripada Allah SWT",
+          "D. Baginda ingin menguasai Mekah"
+        ],
+        correctIndex: 2
+      },
+      {
+        question: "15. Apakah pengajaran yang boleh kita ambil daripada cara Nabi Muhammad S.A.W. menghadapi penentangan masyarakat Mekah?",
+        options: [
+          "A. Membalas kejahatan dengan kejahatan",
+          "B. Berputus asa apabila menghadapi cabaran",
+          "C. Bersabar, berpendirian teguh, dan bijak merancang",
+          "D. Mengelakkan semua orang yang tidak bersetuju dengan kita"
+        ],
+        correctIndex: 2
+      }
+    ];
+
+    /* ========================================================================
+       2. WEB AUDIO API SYNTHESIZER (Cute Sounds & Cheerful BGM)
+       ======================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.bgmTimer = null;
+        this.isPlayingBGM = false;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playJump() {
+        if (this.muted) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.15);
+        
+        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+      }
+
+      playCoin() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        
+        osc.frequency.setValueAtTime(987.77, now); // B5
+        osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(now + 0.25);
+      }
+
+      playCorrect() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+
+          gain.gain.setValueAtTime(0.25, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.2);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.2);
+        });
+      }
+
+      playWrong() {
+        if (this.muted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+
+        osc.frequency.setValueAtTime(220, now); // A3
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.3); // A2
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+
+      startBGM() {
+        if (this.isPlayingBGM) return;
+        this.isPlayingBGM = true;
+        this.scheduleBGMStep();
+      }
+
+      stopBGM() {
+        this.isPlayingBGM = false;
+        if (this.bgmTimer) clearTimeout(this.bgmTimer);
+      }
+
+      scheduleBGMStep() {
+        if (!this.isPlayingBGM || this.muted) {
+          this.bgmTimer = setTimeout(() => this.scheduleBGMStep(), 1000);
+          return;
+        }
+
+        this.init();
+        const now = this.ctx.currentTime;
+        // Simple cheerful melodic arpeggio loop
+        const melody = [523.25, 659.25, 783.99, 659.25, 587.33, 698.46, 880, 698.46];
+        const stepTime = 0.22;
+
+        melody.forEach((freq, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.value = freq;
+
+          gain.gain.setValueAtTime(0.04, now + i * stepTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * stepTime + 0.18);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + i * stepTime);
+          osc.stop(now + i * stepTime + 0.18);
+        });
+
+        this.bgmTimer = setTimeout(() => this.scheduleBGMStep(), melody.length * stepTime * 1000);
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        return this.muted;
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    /* ========================================================================
+       3. CANVAS & GAME ENGINE SETUP
+       ======================================================================== */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
+    function resizeCanvas() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // Game Variables
+    let gameState = 'START'; // START, PLAYING, QUIZ, GAMEOVER, VICTORY
+    let scoreCoins = 0;
+    let lives = 5;
+    let currentQuestionIndex = 0;
+    let correctAnswersCount = 0;
+    let questionsList = [];
+    let obstaclesClearedSinceQuiz = 0;
+    let targetObstaclesToQuiz = 2; // triggers quiz after 2 or 3 obstacles
+
+    // Game Physics & Speeds
+    let gameSpeed = 5;
+    const gravity = 0.65;
+    let groundY = 0;
+
+    // Monkey Character Definition
+    const monkey = {
+      x: 100,
+      y: 0,
+      width: 60,
+      height: 60,
+      vy: 0,
+      isGrounded: false,
+      jumpForce: -14.5,
+      rotation: 0,
+      eyeBlink: 0
+    };
+
+    // Obstacles (Spikes) & Collectibles (Coins)
+    let obstacles = [];
+    let coins = [];
+    let particles = [];
+    let backgroundTrees = [];
+
+    // Initialize Background Parallax Elements
+    function initBackground() {
+      backgroundTrees = [];
+      for (let i = 0; i < width + 400; i += 120 + Math.random() * 80) {
+        backgroundTrees.push({
+          x: i,
+          width: 80 + Math.random() * 60,
+          height: 140 + Math.random() * 100,
+          color: Math.random() > 0.5 ? '#22c55e' : '#16a34a'
+        });
+      }
+    }
+
+    /* ========================================================================
+       4. UTILITY & HELPER FUNCTIONS
+       ======================================================================== */
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function createParticles(x, y, color, count = 8) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 8,
+          vy: (Math.random() - 0.5) * 8 - 2,
+          radius: 3 + Math.random() * 4,
+          color: color,
+          alpha: 1,
+          life: 0.03 + Math.random() * 0.03
+        });
+      }
+    }
+
+    function updateLivesUI() {
+      const container = document.getElementById('livesContainer');
+      let heartsHTML = '';
+      for (let i = 0; i < 5; i++) {
+        if (i < lives) {
+          heartsHTML += '❤️';
+        } else {
+          heartsHTML += '🖤';
+        }
+      }
+      container.innerHTML = heartsHTML;
+    }
+
+    function updateHUD() {
+      document.getElementById('coinCount').innerText = scoreCoins;
+      document.getElementById('questionProgress').innerText = `${currentQuestionIndex} / 15`;
+      updateLivesUI();
+    }
+
+    /* ========================================================================
+       5. GAME ACTIONS & CONTROLS
+       ======================================================================== */
+    function triggerJump() {
+      if (gameState === 'PLAYING' && monkey.isGrounded) {
+        monkey.vy = monkey.jumpForce;
+        monkey.isGrounded = false;
+        sound.playJump();
+        createParticles(monkey.x + monkey.width / 2, monkey.y + monkey.height, '#e2e8f0', 6);
+      }
+    }
+
+    // Input Event Listeners (Spacebar & Touch/Tap)
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        triggerJump();
+      }
+    });
+
+    window.addEventListener('touchstart', (e) => {
+      // Don't trigger jump if tapping on quiz option or buttons
+      if (e.target.closest('#quizModal') || e.target.closest('#startModal') || e.target.closest('#endModal') || e.target.closest('#bgmToggleBtn')) {
+        return;
+      }
+      e.preventDefault();
+      triggerJump();
+    }, { passive: false });
+
+    window.addEventListener('mousedown', (e) => {
+      if (e.target.closest('#quizModal') || e.target.closest('#startModal') || e.target.closest('#endModal') || e.target.closest('#bgmToggleBtn')) {
+        return;
+      }
+      triggerJump();
+    });
+
+    function spawnObstacle() {
+      const spikeWidth = 35 + Math.random() * 15;
+      const spikeHeight = 45 + Math.random() * 15;
+      obstacles.push({
+        x: width + 50,
+        y: groundY - spikeHeight,
+        width: spikeWidth,
+        height: spikeHeight,
+        cleared: false
+      });
+    }
+
+    function spawnCoin() {
+      coins.push({
+        x: width + 50 + Math.random() * 100,
+        y: groundY - 80 - Math.random() * 100,
+        radius: 14,
+        collected: false
+      });
+    }
+
+    /* ========================================================================
+       6. DRAWING ROUTINES (HTML5 Canvas Graphics)
+       ======================================================================== */
+    
+    // Draw Cute Monkey Facing Right
+    function drawMonkey(x, y, w, h) {
+      ctx.save();
+      ctx.translate(x + w / 2, y + h / 2);
+
+      // Slight rotation while jumping
+      if (!monkey.isGrounded) {
+        ctx.rotate((monkey.vy * 0.03));
+      }
+
+      const r = w / 2;
+
+      // Tail
+      ctx.strokeStyle = '#8d5524';
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-r + 10, 5);
+      ctx.quadraticCurveTo(-r - 15, -10, -r - 10, -25);
+      ctx.stroke();
+
+      // Body (Brown)
+      ctx.fillStyle = '#8d5524';
+      ctx.beginPath();
+      ctx.ellipse(0, 8, r * 0.75, r * 0.65, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tummy (Beige)
+      ctx.fillStyle = '#ffdbac';
+      ctx.beginPath();
+      ctx.ellipse(2, 10, r * 0.45, r * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head (Brown)
+      ctx.fillStyle = '#8d5524';
+      ctx.beginPath();
+      ctx.arc(6, -8, r * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ear (Left/Back)
+      ctx.fillStyle = '#8d5524';
+      ctx.beginPath();
+      ctx.arc(-8, -12, r * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffdbac';
+      ctx.beginPath();
+      ctx.arc(-8, -12, r * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Face Snout (Facing Right - Shifted Right)
+      ctx.fillStyle = '#ffdbac';
+      ctx.beginPath();
+      ctx.ellipse(12, -6, r * 0.5, r * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye (Cute Big Black Dot facing right)
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(16, -10, r * 0.14, 0, Math.PI * 2);
+      ctx.fill();
+      // Eye reflection
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(18, -12, r * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nose
+      ctx.fillStyle = '#451a03';
+      ctx.beginPath();
+      ctx.arc(23, -7, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Smile
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(18, -4, 6, 0.1, Math.PI * 0.85);
+      ctx.stroke();
+
+      // Feet & Hands
+      ctx.fillStyle = '#8d5524';
+      // Hand
+      ctx.beginPath();
+      ctx.arc(10, 16, 6, 0, Math.PI * 2);
+      ctx.fill();
+      // Foot
+      ctx.beginPath();
+      ctx.arc(-4, 24, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // Draw Spikes / Thorns Obstacle
+    function drawSpike(obs) {
+      ctx.save();
+      ctx.fillStyle = '#dc2626'; // Red thorn tips
+      ctx.strokeStyle = '#7f1d1d';
+      ctx.lineWidth = 3;
+
+      const baseWidth = obs.width;
+      const numPeaks = 3;
+      const peakWidth = baseWidth / numPeaks;
+
+      ctx.beginPath();
+      ctx.moveTo(obs.x, obs.y + obs.height);
+
+      for (let i = 0; i < numPeaks; i++) {
+        const peakX = obs.x + (i + 0.5) * peakWidth;
+        const peakY = obs.y;
+        const nextX = obs.x + (i + 1) * peakWidth;
+        ctx.lineTo(peakX, peakY);
+        ctx.lineTo(nextX, obs.y + obs.height);
+      }
+
+      ctx.closePath();
+      
+      // Gradient for spikes
+      const grad = ctx.createLinearGradient(obs.x, obs.y, obs.x, obs.y + obs.height);
+      grad.addColorStop(0, '#ef4444');
+      grad.addColorStop(0.6, '#b91c1c');
+      grad.addColorStop(1, '#450a0a');
+      ctx.fillStyle = grad;
+
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Draw Golden Spinning Coin
+    function drawCoin(c) {
+      ctx.save();
+      ctx.translate(c.x, c.y);
+
+      // Gold Glow Outer
+      ctx.shadowColor = '#f59e0b';
+      ctx.shadowBlur = 10;
+
+      // Coin Base
+      ctx.fillStyle = '#fbbf24';
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, c.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Inner Ring
+      ctx.beginPath();
+      ctx.arc(0, 0, c.radius * 0.65, 0, Math.PI * 2);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Coin Star / Symbol
+      ctx.fillStyle = '#78350f';
+      ctx.font = 'bold 12px Fredoka';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('★', 0, 1);
+
+      ctx.restore();
+    }
+
+    /* ========================================================================
+       7. MAIN GAME LOOP & UPDATES
+       ======================================================================== */
+    let lastSpawnTime = 0;
+
+    function updateGame(timestamp) {
+      if (gameState !== 'PLAYING') return;
+
+      groundY = height - 80;
+
+      // Monkey Physics
+      monkey.vy += gravity;
+      monkey.y += monkey.vy;
+
+      if (monkey.y + monkey.height >= groundY) {
+        monkey.y = groundY - monkey.height;
+        monkey.vy = 0;
+        monkey.isGrounded = true;
+      }
+
+      // Parallax Background Trees Update
+      backgroundTrees.forEach(tree => {
+        tree.x -= gameSpeed * 0.3;
+        if (tree.x + tree.width < 0) {
+          tree.x = width + Math.random() * 100;
+        }
+      });
+
+      // Spawn Spikes and Coins
+      if (timestamp - lastSpawnTime > 1800 + Math.random() * 1000) {
+        spawnObstacle();
+        if (Math.random() > 0.3) {
+          spawnCoin();
+        }
+        lastSpawnTime = timestamp;
+      }
+
+      // Update Obstacles
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.x -= gameSpeed;
+
+        // Check if Monkey Jumped Over Obstacle
+        if (!obs.cleared && obs.x + obs.width < monkey.x) {
+          obs.cleared = true;
+          obstaclesClearedSinceQuiz++;
+
+          // Check if Quiz should pop out (after 2 or 3 obstacles)
+          if (obstaclesClearedSinceQuiz >= targetObstaclesToQuiz) {
+            triggerQuizModal();
+            break;
+          }
+        }
+
+        // Collision Detection with Monkey
+        if (
+          monkey.x + 10 < obs.x + obs.width &&
+          monkey.x + monkey.width - 10 > obs.x &&
+          monkey.y + 10 < obs.y + obs.height &&
+          monkey.y + monkey.height - 5 > obs.y
+        ) {
+          // Hit Spike! Lose a Life
+          sound.playWrong();
+          lives--;
+          createParticles(monkey.x + monkey.width / 2, monkey.y + monkey.height / 2, '#ef4444', 15);
+          obstacles.splice(i, 1);
+          updateHUD();
+
+          if (lives <= 0) {
+            handleGameOver(false);
+          }
+          continue;
+        }
+
+        // Remove Offscreen Spikes
+        if (obs.x + obs.width < -50) {
+          obstacles.splice(i, 1);
+        }
+      }
+
+      // Update Coins
+      for (let i = coins.length - 1; i >= 0; i--) {
+        const c = coins[i];
+        c.x -= gameSpeed;
+
+        // Collision with Monkey
+        const distX = (monkey.x + monkey.width / 2) - c.x;
+        const distY = (monkey.y + monkey.height / 2) - c.y;
+        const distance = Math.sqrt(distX * distX + distY * distY);
+
+        if (distance < c.radius + monkey.width / 2) {
+          // Collected Coin!
+          sound.playCoin();
+          scoreCoins += 10;
+          createParticles(c.x, c.y, '#fbbf24', 10);
+          coins.splice(i, 1);
+          updateHUD();
+          continue;
+        }
+
+        // Remove Offscreen Coins
+        if (c.x + c.radius < -50) {
+          coins.splice(i, 1);
+        }
+      }
+
+      // Update Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.life;
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    function renderGame() {
+      // Clear Screen
+      ctx.clearRect(0, 0, width, height);
+
+      // Sky Gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#38bdf8');
+      skyGrad.addColorStop(0.6, '#bae6fd');
+      skyGrad.addColorStop(1, '#fef08a');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Parallax Background Trees
+      backgroundTrees.forEach(tree => {
+        ctx.fillStyle = tree.color;
+        ctx.beginPath();
+        ctx.arc(tree.x + tree.width / 2, groundY - tree.height + 40, tree.width / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(tree.x + tree.width / 2 - 8, groundY - 40, 16, 40);
+      });
+
+      // Ground / Jungle Floor
+      const groundGrad = ctx.createLinearGradient(0, groundY, 0, height);
+      groundGrad.addColorStop(0, '#22c55e');
+      groundGrad.addColorStop(0.15, '#15803d');
+      groundGrad.addColorStop(1, '#3f2305');
+      ctx.fillStyle = groundGrad;
+      ctx.fillRect(0, groundY, width, height - groundY);
+
+      // Grass Top Line
+      ctx.fillStyle = '#4ade80';
+      ctx.fillRect(0, groundY, width, 8);
+
+      // Draw Collectibles & Obstacles
+      coins.forEach(drawCoin);
+      obstacles.forEach(drawSpike);
+
+      // Draw Monkey Character
+      drawMonkey(monkey.x, monkey.y, monkey.width, monkey.height);
+
+      // Draw Particles
+      particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function gameLoop(timestamp) {
+      updateGame(timestamp);
+      renderGame();
+      requestAnimationFrame(gameLoop);
+    }
+
+    /* ========================================================================
+       8. QUIZ SYSTEM & POPUP LOGIC
+       ======================================================================== */
+    function triggerQuizModal() {
+      if (currentQuestionIndex >= 15) {
+        handleGameOver(true);
+        return;
+      }
+
+      gameState = 'QUIZ';
+      obstaclesClearedSinceQuiz = 0;
+      targetObstaclesToQuiz = Math.random() > 0.5 ? 2 : 3;
+
+      const qData = questionsList[currentQuestionIndex];
+      document.getElementById('quizNumberTag').innerText = `Soalan ${currentQuestionIndex + 1} / 15`;
+      document.getElementById('quizQuestionText').innerText = qData.question;
+      
+      const container = document.getElementById('quizOptionsContainer');
+      container.innerHTML = '';
+      document.getElementById('quizFeedback').innerHTML = '';
+
+      qData.options.forEach((optText, index) => {
+        const btn = document.createElement('button');
+        btn.className = "w-full text-left p-4 rounded-2xl border-2 border-indigo-200 bg-white hover:bg-indigo-50 font-semibold text-slate-800 text-sm md:text-base transition-all btn-bounce custom-shadow flex items-center justify-between";
+        btn.innerHTML = `<span>${optText}</span> <span class="opt-icon text-xl"></span>`;
+        btn.onclick = () => selectQuizAnswer(index, qData.correctIndex, btn);
+        container.appendChild(btn);
+      });
+
+      document.getElementById('quizModal').classList.remove('hidden');
+    }
+
+    function selectQuizAnswer(selectedIndex, correctIndex, selectedBtn) {
+      const buttons = document.querySelectorAll('#quizOptionsContainer button');
+      buttons.forEach(btn => btn.disabled = true);
+
+      const feedbackEl = document.getElementById('quizFeedback');
+
+      if (selectedIndex === correctIndex) {
+        // Correct Answer!
+        sound.playCorrect();
+        correctAnswersCount++;
+        selectedBtn.classList.remove('bg-white', 'border-indigo-200');
+        selectedBtn.classList.add('bg-emerald-100', 'border-emerald-500', 'text-emerald-900');
+        selectedBtn.querySelector('.opt-icon').innerText = '✅';
+
+        feedbackEl.innerHTML = `<span class="text-emerald-600 animate-bounce">🎉 TEPAT & BETUL! ⭐ +50 Syiling</span>`;
+        scoreCoins += 50;
+        updateHUD();
+
+      } else {
+        // Wrong Answer!
+        sound.playWrong();
+        lives--;
+        selectedBtn.classList.remove('bg-white', 'border-indigo-200');
+        selectedBtn.classList.add('bg-red-100', 'border-red-500', 'text-red-900');
+        selectedBtn.querySelector('.opt-icon').innerText = '❌';
+
+        // Highlight correct option
+        buttons[correctIndex].classList.remove('bg-white');
+        buttons[correctIndex].classList.add('bg-emerald-100', 'border-emerald-500');
+        buttons[correctIndex].querySelector('.opt-icon').innerText = '✅';
+
+        feedbackEl.innerHTML = `<span class="text-red-500">😅 JAWAPAN KURANG TEPAT! Tolak 1 Nyawa 💔</span>`;
+        updateHUD();
+      }
+
+      currentQuestionIndex++;
+
+      // Resume game after delay
+      setTimeout(() => {
+        document.getElementById('quizModal').classList.add('hidden');
+        
+        if (lives <= 0) {
+          handleGameOver(false);
+        } else if (currentQuestionIndex >= 15) {
+          handleGameOver(true);
+        } else {
+          gameState = 'PLAYING';
+        }
+      }, 1800);
+    }
+
+    /* ========================================================================
+       9. GAME OVER & RESTART SYSTEM
+       ======================================================================== */
+    function handleGameOver(isVictory) {
+      gameState = 'GAMEOVER';
+      const endModal = document.getElementById('endModal');
+      const endBorder = document.getElementById('endCardBorder');
+      const endEmoji = document.getElementById('endEmoji');
+      const endTitle = document.getElementById('endTitle');
+      const endSubtitle = document.getElementById('endSubtitle');
+
+      if (isVictory || lives > 0) {
+        sound.playCorrect();
+        endBorder.className = "bg-white border-4 border-emerald-500 rounded-3xl p-6 md:p-8 max-w-lg w-full text-center custom-shadow relative";
+        endEmoji.innerText = '🏆';
+        endTitle.innerText = 'TAHNIAH & SYABAS!';
+        endTitle.className = 'text-3xl md:text-4xl font-extrabold mb-2 text-emerald-600';
+        endSubtitle.innerText = 'Anda berjaya menyelesaikan kesemua 15 soalan!';
+      } else {
+        endBorder.className = "bg-white border-4 border-red-500 rounded-3xl p-6 md:p-8 max-w-lg w-full text-center custom-shadow relative";
+        endEmoji.innerText = '💔';
+        endTitle.innerText = 'PERMAINAN TAMAT';
+        endTitle.className = 'text-3xl md:text-4xl font-extrabold mb-2 text-red-600';
+        endSubtitle.innerText = 'Nyawa anda telah habis. Cuba lagi ya!';
+      }
+
+      document.getElementById('endScoreText').innerText = `${correctAnswersCount} / 15`;
+      document.getElementById('endCoinsText').innerText = `🪙 ${scoreCoins}`;
+      
+      let heartsHTML = '';
+      for (let i = 0; i < 5; i++) {
+        heartsHTML += i < lives ? '❤️' : '🖤';
+      }
+      document.getElementById('endLivesText').innerText = heartsHTML;
+
+      endModal.classList.remove('hidden');
+    }
+
+    function startNewGame() {
+      // Reset State
+      lives = 5;
+      scoreCoins = 0;
+      currentQuestionIndex = 0;
+      correctAnswersCount = 0;
+      obstaclesClearedSinceQuiz = 0;
+      obstacles = [];
+      coins = [];
+      particles = [];
+
+      // Shuffle Questions and options for fresh replay
+      questionsList = shuffleArray(originalQuestions).map(q => {
+        // Deep copy options
+        const shuffledOptions = shuffleArray(q.options);
+        // Find new index of correct answer (identified by '✅' originally or index)
+        const originalCorrectText = q.options[q.correctIndex];
+        const newCorrectIndex = shuffledOptions.indexOf(originalCorrectText);
+        return {
+          question: q.question,
+          options: shuffledOptions,
+          correctIndex: newCorrectIndex
+        };
+      });
+
+      monkey.y = groundY - monkey.height;
+      monkey.vy = 0;
+
+      updateHUD();
+      initBackground();
+
+      document.getElementById('startModal').classList.add('hidden');
+      document.getElementById('endModal').classList.add('hidden');
+      document.getElementById('quizModal').classList.add('hidden');
+
+      gameState = 'PLAYING';
+      sound.startBGM();
+    }
+
+    /* ========================================================================
+       10. INITIALIZATION & EVENT BINDINGS
+       ======================================================================== */
+    document.getElementById('startGameBtn').addEventListener('click', () => {
+      sound.init();
+      startNewGame();
+    });
+
+    document.getElementById('restartGameBtn').addEventListener('click', () => {
+      startNewGame();
+    });
+
+    document.getElementById('bgmToggleBtn').addEventListener('click', () => {
+      const isMuted = sound.toggleMute();
+      document.getElementById('bgmToggleBtn').innerText = isMuted ? '🔇' : '🔊';
+    });
+
+    // Start Animation Render Loop
+    window.onload = () => {
+      groundY = height - 80;
+      monkey.y = groundY - monkey.height;
+      initBackground();
+      requestAnimationFrame(gameLoop);
+    };
+  </script>
+</body>
+</html>
